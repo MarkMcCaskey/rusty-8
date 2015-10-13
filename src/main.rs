@@ -1,7 +1,10 @@
 use std::env;
+use std::io;
+use std::io::prelude::*;
+use std::fs::File;
 use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
-use std::collections:HashSet;
+use std::collections::HashSet;
 
 struct State {
     memory:         [i8, 4096],
@@ -21,8 +24,8 @@ impl State {
         
         match( opcode & 0xF000 >> 12 ) {
             0 => match opcode {
-                00E0 => self.clear_screen(),
-                00EE => self.return_op(),
+                0x00E0 => self.clear_screen(),
+                0x00EE => self.return_op(),
                 _ => panic!("Invalid opcode {}", opcode),
             },
             1  => self.program_counter = (opcode & 0x0FFF),
@@ -36,10 +39,11 @@ impl State {
             9  => self.skip_if_xneqy(b, c),
             10 => self.program_counter = (opcode & 0xFFF),
             11 => self.program_counter = (opcode & 0xFFF) + self.registers[0],
-            12 => ,//random number stuff later
-            13 => ,
-            14 => ,
-            15 => self.f_dispatcher( opcode )
+            12 => panic!("Opcode 0xCXXX not implemented!"),//random number stuff later
+            13 => panic!("Opcode 0xDXXX not implemented!"),
+            14 => panic!("Opcode 0xEXXX not implemented!"),
+            15 => self.f_dispatcher( opcode ),
+            _  => panic!("Opcode {} not recognized", opcode)
         }
     }
 
@@ -48,17 +52,25 @@ impl State {
 
         match( opcode & 0xFF ) {
             0x07 => self.registers[b] = self.delay_timer,
-            0x0A => ,
+            0x0A => panic!("Opcode FXXA not implemented!"),
             0x15 => self.delay_timer = self.registers[b],
             0x18 => self.sound_timer = self.registers[b],
             0x1E => self.program_counter += self.registers[b],
-            0x29 => ,
-            0x33 => ,
-            0x55 => 
+            0x29 => panic!("Opcode FX29 not implemented!"),
+            0x33 => panic!("Opcode FX33 not implemented!"),
+            0x55 => panic!("Opcode FX55 not implemented!"),
+            _    => panic!("Opcode {} not recognized", opcode)
+             
         }
     }
 
     fn clear_screen(&self) {
+        panic!("Clear screen not implemented!");
+    }
+
+    fn run_opcode(&self) {
+        self.increment_pc();
+        self.dispatch( self.memory[self.program_counter-2] );
     }
 
     fn arithmetic_dispatch(&self, opcode: i16 ) {
@@ -68,7 +80,8 @@ impl State {
             0 => self.registers[x] = self.registers[y],
             1 => self.registers[x] |= self.registers[y],
             2 => self.registers[x] &= self.registers[y],
-            3 => , //^ is xor
+            3 => panic!("Opcode 8xx3 not implemented!"), //^ is xor
+            _ => panic!("ALU not finished")
             //<< is left shift, >> is right shift
         }
     }
@@ -135,7 +148,15 @@ fn main() {
     let arg_vals = env::args();
     if( arg_vals.length() < 2 )
     {
-        //error here
+        panic!("Enter the name of a file to run");
     }
+
+    let mut f = try!(File::open(arg_vals[1]));
+    f.read(&mut state.memory[512]); // not sure about this
+    state.program_counter=512;
+    //start loop here
+    state.run_opcode();
+    //render and other IO stuff here?
+    
     println!("Hello, world!");
 }
