@@ -1,10 +1,15 @@
+use std::env;
+use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
+use std::collections:HashSet;
+
 struct State {
-    memory: [i8,4096],
-    registers: [i8,16],
-    stack: [i16, 16],
-    delay_timer: i16,
-    sound_timer: i16,
-    stack_pointer: i16,
+    memory:         [i8, 4096],
+    registers:      [i8, 16],
+    stack:          [i16,16],
+    delay_timer:     i16,
+    sound_timer:     i16,
+    stack_pointer:   i16,
     program_counter: i16,
 }
 
@@ -57,6 +62,15 @@ impl State {
     }
 
     fn arithmetic_dispatch(&self, opcode: i16 ) {
+        let x = (opcode & 0xF00);
+        let y = (opcode & 0xF0);
+        match (opcode & 0xF) {
+            0 => self.registers[x] = self.registers[y],
+            1 => self.registers[x] |= self.registers[y],
+            2 => self.registers[x] &= self.registers[y],
+            3 => , //^ is xor
+            //<< is left shift, >> is right shift
+        }
     }
 
     fn skip_if_xeqy( &self, x: i8, y: i8 ) {
@@ -94,8 +108,34 @@ impl State {
     }
 }
 
+fn pressed_scancode_set(e: &sdl2::EventPump) -> HashSet<Scancode> {
+    e.keyboard_state().pressed_scancodes().collect()
+}
+
+fn pressed_keycode_set(e: &sdl2::EventPump) -> HashSet <Keycode> {
+    e.keyboard_state().pressed_scancodes()
+        .filter_map(Keycode::from_scancode())
+        .collect()
+}
+
+fn newly_pressed(old: &HashSet<Scancode>, new: &HashSet<Scancode>)
+                 -> HashSet<Scancode> {
+    new - old
+}
+
+fn graphics_loop() {
+    let surface = sdl2::Surface::new(64,32, sdl2::Pixels::PixelFormatEnum::Index1LSB);
+    let render_context = sdl2::render::from_surface(surface);
+    
+}
+
 
 fn main() {
     let mut state: State; 
+    let arg_vals = env::args();
+    if( arg_vals.length() < 2 )
+    {
+        //error here
+    }
     println!("Hello, world!");
 }
