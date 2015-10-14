@@ -7,9 +7,9 @@ use sdl2::keyboard::Scancode;
 use std::collections::HashSet;
 
 struct State {
-    memory:         [i8, 4096],
-    registers:      [i8, 16],
-    stack:          [i16,16],
+    memory:         [i8; 4096],
+    registers:      [i8; 16],
+    stack:          [i16;16],
     delay_timer:     i16,
     sound_timer:     i16,
     stack_pointer:   i16,
@@ -77,13 +77,12 @@ impl State {
         let x = (opcode & 0xF00) >> 8; //0x0x00
         let y = (opcode & 0xF0)  >> 4;  //0x00y0 
         match (opcode & 0xF) {
-            0x0 => self.registers[x]  = self.registers[y], // Stores Vy into Vx
-            0x1 => self.registers[x] |= self.registers[y],// Stores Bitwise OR of Vy and Vx into Vx
-            0x2 => self.registers[x] &= self.registers[y],// Stores Bitwise AND of Vy and Vx into Vx
-            0x3 => self.registers[x] ^= self.registers[y],// Stores Bitwise XOR of Vy and Vx into Vx
-            0x4 => self.registers[x] += self.registers[y]; if((x+y>>8)>1){self.registers[0xF]=1},
-		// Stores Vy + Vx into Vx and sets VF = carry      
-  	    0x5 => if(self.registers[x]>self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
+            0x0 => self.registers[x]  = self.registers[y], 
+            0x1 => self.registers[x] |= self.registers[y],
+            0x2 => self.registers[x] &= self.registers[y],
+            0x3 => self.registers[x] ^= self.registers[y],
+            0x4 => arithmetic_four(self, x, y),
+            0x5 => if(self.registers[x]>self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
 		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry
 	    0x6 => self.registers[f] = self.registers[x] & 0x1; self.registers[x] >> 1,
 		 //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
@@ -93,6 +92,16 @@ impl State {
 		 self.registers[x] << 1, // Then Vx is multipled by 2
             _  => panic!("Opcode {} not recognized", opcode),
 
+        }
+    }
+
+    fn arithmetic_four(&self, x: i8, y: i8) {
+	// Stores Vy + Vx into Vx and sets VF = carry      
+        let xl = registers[x] as i16;
+        let yl = registers[y] as i16;
+        self.registers[x] += self.registers[y];
+        if((xl+yl>>8)>1){
+            self.registers[0xF]=1
         }
     }
 
