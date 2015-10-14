@@ -74,25 +74,23 @@ impl State {
     }
 
     fn arithmetic_dispatch(&self, opcode: i16 ) {
-        let x = (opcode & 0xF00); //0x0x00
-        let y = (opcode & 0xF0);  //0x00y0 //isn't bitshifting needed?
-	let F; 
+        let x = (opcode & 0xF00) >> 8; //0x0x00
+        let y = (opcode & 0xF0)  >> 4;  //0x00y0 
         match (opcode & 0xF) {
-            0 => self.registers[x] = self.registers[y], // Stores Vy into Vx
-            1 => self.registers[x] |= self.registers[y],// Stores Bitwise OR of Vy and Vx into Vx
-            2 => self.registers[x] &= self.registers[y],// Stores Bitwise AND of Vy and Vx into Vx
-            3 => self.registers[x] ^= self.registers[y],// Stores Bitwise XOR of Vy and Vx into Vx
-
-            4 => self.registers[x] += self.registers[y] if((x+y>>8)>1){self.registers[F]=1},i
-		// Stores Vy + Vx into Vx and sets VF = carry      //***ALU not finished ? ALU?
-  	    5 => if(self.registers[x]>self.registers[y]){self.registers[F]=1} self.registers[x] -= self.registers[y] ,
+            0x0 => self.registers[x]  = self.registers[y], // Stores Vy into Vx
+            0x1 => self.registers[x] |= self.registers[y],// Stores Bitwise OR of Vy and Vx into Vx
+            0x2 => self.registers[x] &= self.registers[y],// Stores Bitwise AND of Vy and Vx into Vx
+            0x3 => self.registers[x] ^= self.registers[y],// Stores Bitwise XOR of Vy and Vx into Vx
+            0x4 => self.registers[x] += self.registers[y]; if((x+y>>8)>1){self.registers[0xF]=1},
+		// Stores Vy + Vx into Vx and sets VF = carry      
+  	    0x5 => if(self.registers[x]>self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
 		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry
-	    6 => self.registers[f] = self.registers[x] & 0x1 self.registers[x] /= 2,
+	    0x6 => self.registers[f] = self.registers[x] & 0x1; self.registers[x] >> 1,
 		 //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
-	    7 => if(self.registers[x]<self.registers[y]){self.registers[F]=1} self.registers[x] -= self.registers[y] ,
+	    0x7 => if(self.registers[x]<self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
 		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry   
-            14 /*14 or 0xE*/ =>  self.registers[F] =(self.registers[x] >> 3)//Sets the most signigicant bit of Vx to VF
-		 self.registers[x] *= 2, // Then Vx is multipled by 2
+            0xE =>  self.registers[0xF] =(self.registers[x] >> 3)//Sets the most signigicant bit of Vx to VF
+		 self.registers[x] << 1, // Then Vx is multipled by 2
 
         }
     }
