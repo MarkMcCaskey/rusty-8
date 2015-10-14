@@ -91,6 +91,7 @@ impl State {
 		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry   
             0xE =>  self.registers[0xF] =(self.registers[x] >> 3)//Sets the most signigicant bit of Vx to VF
 		 self.registers[x] << 1, // Then Vx is multipled by 2
+            _  => panic!("Opcode {} not recognized", opcode),
 
         }
     }
