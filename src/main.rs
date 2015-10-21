@@ -2,9 +2,10 @@ use std::env;
 use std::io;
 use std::io::prelude::*;
 use std::fs::File;
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
+/*use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;*/
 use std::collections::HashSet;
+use std::ops;
 
 struct State {
     memory:         [i8; 4096],
@@ -19,8 +20,10 @@ struct State {
 impl State {
 
     fn dispatch(&self, opcode: i16) {
-        let b = (opcode & 0x0F00) >> 8;
-        let c = (opcode & 0x00F0) >> 4;
+        let b = ((opcode & 0x0F00) >> 8) as i8;
+        let c = ((opcode & 0x00F0) >> 4) as i8; 
+        let bcd = (opcode & 0xFFF) as i16;
+        let cd  = (opcode & 0xFF) as i8;
         
         match( opcode & 0xF000 >> 12 ) {
             0 => match opcode {
@@ -28,17 +31,17 @@ impl State {
                 0x00EE => self.return_op(),
                 _ => panic!("Invalid opcode {}", opcode),
             },
-            1  => self.program_counter = (opcode & 0x0FFF),
-            2  => self.call_op( opcode & 0x0FFF ),
-            3  => self.skip_if_eq(   b, (opcode & 0xFF) ),
-            4  => self.skip_if_neq(  b, (opcode & 0xFF) ),
-            5  => self.skip_if_xeqy( b, (opcode & 0xF0) ),
-            6  => self.registers[b]  =  (opcode & 0xFF),
-            7  => self.registers[b] +=  (opcode & 0xFF),
+            1  => self.program_counter = bcd,
+            2  => self.call_op( bcd ),
+            3  => self.skip_if_eq( b, cd ),
+            4  => self.skip_if_neq( b, cd ),
+            5  => self.skip_if_xeqy(  b, c ),
+            6  => self.registers[b]  =  cd,
+            7  => self.registers[b] +=  cd,
             8  => self.arithmetic_dispatch( opcode ),
-            9  => self.skip_if_xneqy(b, c),
-            10 => self.program_counter = (opcode & 0xFFF),
-            11 => self.program_counter = (opcode & 0xFFF) + self.registers[0],
+            9  => self.skip_if_xneqy( b, c),
+            10 => self.program_counter = bcd,
+            11 => self.program_counter = bcd + self.registers[0],
             12 => panic!("Opcode 0xCXXX not implemented!"),//random number stuff later
             13 => panic!("Opcode 0xDXXX not implemented!"),
             14 => panic!("Opcode 0xEXXX not implemented!"),
@@ -81,48 +84,75 @@ impl State {
             0x1 => self.registers[x] |= self.registers[y],
             0x2 => self.registers[x] &= self.registers[y],
             0x3 => self.registers[x] ^= self.registers[y],
-            0x4 => arithmetic_four(self, x, y),
-            0x5 => if(self.registers[x]>self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
-		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry
-	    0x6 => self.registers[f] = self.registers[x] & 0x1; self.registers[x] >> 1,
-		 //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
-	    0x7 => if(self.registers[x]<self.registers[y]){self.registers[0xF]=1} self.registers[x] -= self.registers[y] ,
-		// If Vx>Vy then VF is 1, Stores Vy - Vx into Vx ans sets VF = NOT carry   
-            0xE =>  self.registers[0xF] =(self.registers[x] >> 3)//Sets the most signigicant bit of Vx to VF
-		 self.registers[x] << 1, // Then Vx is multipled by 2
-            _  => panic!("Opcode {} not recognized", opcode),
-
+            0x4 => self.arithmetic_four(x, y),
+            0x5 => self.arithmetic_five(x, y),
+	    0x6 => self.arithmetic_six(x, y),
+	    0x7 => self.arithmetic_seven(x, y),
+            0xE => self.arithmetic_fourteen(x, y),               _   => panic!("Opcode {} not recognized", opcode),
         }
     }
 
     fn arithmetic_four(&self, x: i8, y: i8) {
 	// Stores Vy + Vx into Vx and sets VF = carry      
-        let xl = registers[x] as i16;
-        let yl = registers[y] as i16;
+        let xl = self.registers[x] as i16;
+        let yl = self.registers[y] as i16;
         self.registers[x] += self.registers[y];
         if((xl+yl>>8)>1){
             self.registers[0xF]=1
         }
     }
 
+    
+    fn arithmetic_five(&self, x: i8, y: i8) {
+        if(self.registers[x] > self.registers[y]) {
+            self.registers[0xF]=1;
+        }
+        self.registers[x] -= self.registers[y];
+    }
+
+
+    //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
+    fn arithmetic_six(&self, x: i8, y: i8) {
+        self.registers[0xF] = self.registers[x] & 0x1;
+        self.registers[x] >> 1;
+    }
+
+
+    fn arithmetic_seven(&self, x: i8, y: i8) {
+        if(self.registers[x] < self.registers[y]) {
+            self.registers[0xF] = 1;
+        }
+        self.registers[x] = self.registers[y]
+            - self.registers[x];
+    }
+
+    fn arithmetic_fourteen(&self, x: i8, y: i8) {
+        self.registers[0xF] = (self.registers[x] >> 7) & 1;
+	self.registers[x] << 1; 
+    }
+
     fn skip_if_xeqy( &self, x: i8, y: i8 ) {
-        if (self.registers[x] == self.registers[y])
+        if (self.registers[x] == self.registers[y]) {
             self.increment_pc();
+        }
     }
 
     fn skip_if_xneqy( &self, x: i8, y: i8 ) {
-        if (self.registers[x] != self.registers[y])
+        if (self.registers[x] != self.registers[y]) {
             self.increment_pc();
+        }
     }
 
     fn skip_if_eq( &self, x: i8, n: i8 ) {
-        if (self.registers[x] == n)
+        if (self.registers[x] == n) {
             self.increment_pc();
+        }
     }
 
     fn skip_if_neq( &self, x: i8, n: i8 ) {
-        if (self.registers[x] != n)
+        if (self.registers[x] != n) {
             self.increment_pc();
+        }
     }
 
     fn increment_pc(&self) {
@@ -130,16 +160,19 @@ impl State {
     }
 
     fn call_op( &self, address: i16 ) {
-        self.stack[stack_pointer] = self.program_counter;
+        self.stack[self.stack_pointer] =
+            self.program_counter;
+
         self.program_counter = address;
     }
 
     fn return_op(&self) {
         self.program_counter = self.stack[self.stack_pointer];
-        self.stack_pointer--;
+        self.stack_pointer-=1;
     }
 }
 
+/* IO code needs a lot of review, commenting it out for now
 fn pressed_scancode_set(e: &sdl2::EventPump) -> HashSet<Scancode> {
 B
     e.keyboard_state().pressed_scancodes().collect()
@@ -161,18 +194,19 @@ fn graphics_loop() {
     let render_context = sdl2::render::from_surface(surface);
     
 }
-
+*/
 
 fn main() {
     let mut state: State; 
+
     let arg_vals = env::args();
     if( arg_vals.length() < 2 )
     {
         panic!("Enter the name of a file to run");
     }
 
-    let mut f = try!(File::open(arg_vals[1]));
-    f.read(&mut state.memory[512]); // not sure about this
+    let mut fin = try!(File::open(arg_vals[1]));
+    fin.read(&mut state.memory[512]); // not sure about this
     state.program_counter=512;
     //start loop here
     state.run_opcode();
