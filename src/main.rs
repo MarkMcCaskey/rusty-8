@@ -6,7 +6,9 @@ use std::fs::File;
 use sdl2::keyboard::Scancode;*/
 use std::collections::HashSet;
 use std::ops;
-use std::ops::Index;
+
+mod state;
+
 
 /* IO code needs a lot of review, commenting it out for now
 fn pressed_scancode_set(e: &sdl2::EventPump) -> HashSet<Scancode> {
@@ -33,7 +35,7 @@ fn graphics_loop() {
 */
 
 fn main() {
-    let mut state: State; 
+    let mut state: state::State; 
 
     let arg_vals = env::args();
     if( arg_vals.length() < 2 )
