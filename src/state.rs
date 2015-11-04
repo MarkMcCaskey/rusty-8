@@ -1,4 +1,4 @@
-struct State {
+pub struct State {
     memory:         [i8; 4096],
     registers:      [i8; 16],
     stack:          [i16;16],
@@ -10,7 +10,16 @@ struct State {
 
 impl State {
 
-    fn dispatch(&self, opcode: i16) {
+    pub fn initialize(&mut self, memory: [i8;4096])
+    {
+        self.memory = memory;
+        self.delay_timer = 0;
+        self.sound_timer = 0;
+        self.stack_pointer = 0;
+        self.program_counter = 0x200;
+    }
+    
+    fn dispatch(&mut self, opcode: i16) {
         let b = ((opcode & 0x0F00) >> 8) as i8;
         let c = ((opcode & 0x00F0) >> 4) as i8; 
         let x = b as usize;
@@ -43,7 +52,7 @@ impl State {
         }
     }
 
-    fn f_dispatcher(&self, opcode: i16) {
+    fn f_dispatcher(&mut self, opcode: i16) {
         let b = (opcode & 0x0F00) >> 8;
         let x = b as usize;
 
@@ -65,7 +74,7 @@ impl State {
         panic!("Clear screen not implemented!");
     }
 
-    fn run_opcode(&self) {
+    pub fn run_opcode(&mut self) {
         self.increment_pc();
         let first_byte = self.memory[
             (self.program_counter-2) as usize] as i16; 
@@ -74,7 +83,7 @@ impl State {
         self.dispatch( second_byte | (first_byte << 8) );
     }
 
-    fn arithmetic_dispatch(&self, opcode: i16 ) {
+    fn arithmetic_dispatch(&mut self, opcode: i16 ) {
         let b = (opcode & 0xF00) >> 8; //0x0x00
         let c = (opcode & 0xF0)  >> 4;  //0x00y0 
         let x = b as usize;
@@ -92,7 +101,7 @@ impl State {
         }
     }
 
-    fn arithmetic_four(&self, x: usize, y: usize) {
+    fn arithmetic_four(&mut self, x: usize, y: usize) {
 	// Stores Vy + Vx into Vx and sets VF = carry      
         let xl = self.registers[x] as i16;
         let yl = self.registers[y] as i16;
@@ -103,7 +112,7 @@ impl State {
     }
 
     
-    fn arithmetic_five(&self, x: usize, y: usize) {
+    fn arithmetic_five(&mut self, x: usize, y: usize) {
         if(self.registers[x] > self.registers[y]) {
             self.registers[0xF]=1;
         }
@@ -112,13 +121,13 @@ impl State {
 
 
     //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
-    fn arithmetic_six(&self, x: usize, y: usize) {
+    fn arithmetic_six(&mut self, x: usize, y: usize) {
         self.registers[0xF] = self.registers[x] & 0x1;
         self.registers[x] >> 1;
     }
 
 
-    fn arithmetic_seven(&self, x: usize, y: usize) {
+    fn arithmetic_seven(&mut self, x: usize, y: usize) {
         if(self.registers[x] < self.registers[y]) {
             self.registers[0xF] = 1;
         }
@@ -126,47 +135,47 @@ impl State {
             - self.registers[x];
     }
 
-    fn arithmetic_fourteen(&self, x: usize, y: usize) {
+    fn arithmetic_fourteen(&mut self, x: usize, y: usize) {
         self.registers[0xF] = (self.registers[x] >> 7) & 1;
 	self.registers[x] << 1; 
     }
 
-    fn skip_if_xeqy( &self, x: usize, y: usize ) {
+    fn skip_if_xeqy( &mut self, x: usize, y: usize ) {
         if (self.registers[x] == self.registers[y]) {
             self.increment_pc();
         }
     }
 
-    fn skip_if_xneqy( &self, x: usize, y: usize ) {
+    fn skip_if_xneqy( &mut self, x: usize, y: usize ) {
         if (self.registers[x] != self.registers[y]) {
             self.increment_pc();
         }
     }
 
-    fn skip_if_eq( &self, x: usize, n: i8 ) {
+    fn skip_if_eq( &mut self, x: usize, n: i8 ) {
         if (self.registers[x] == n) {
             self.increment_pc();
         }
     }
 
-    fn skip_if_neq( &self, x: usize, n: i8 ) {
+    fn skip_if_neq( &mut self, x: usize, n: i8 ) {
         if (self.registers[x] != n) {
             self.increment_pc();
         }
     }
 
-    fn increment_pc(&self) {
+    fn increment_pc(&mut self) {
         self.program_counter += 2;
     }
 
-    fn call_op( &self, address: i16 ) {
+    fn call_op( &mut self, address: i16 ) {
         self.stack[self.stack_pointer as usize] =
             self.program_counter;
 
         self.program_counter = address;
     }
 
-    fn return_op(&self) {
+    fn return_op(&mut self) {
         self.program_counter =
             self.stack[self.stack_pointer as usize];
         self.stack_pointer-=1;
