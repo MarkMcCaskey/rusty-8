@@ -47,13 +47,16 @@ fn main() {
     }
     
     let arg: &String = &args[1];
-//    let path = Path::new(arg);
-    let mut fin =File::open(arg).unwrap();
-//        .ok()
-//        .expect("Unable to open file");
+    let mut fin = File::open(arg)
+        .ok()
+        .expect("File not found");
 
-    let in_vals = fin.read_i16::<BigEndian>().unwrap();
-//    state.initialize([0; 4096]);
+//    let in_vals = fin.read_i8().unwrap();
+
+    let mut i = 0x200;
+    for x in fin.bytes() {
+        state.memory[i] = x.unwrap() as i8;
+    }
 
     //start loop here
     state.run_opcode();
