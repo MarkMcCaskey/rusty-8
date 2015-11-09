@@ -4,4 +4,3 @@ version = "0.1.0"
 authors = ["Mark McCaskey <mmccask2@gmu.edu>"]
 [dependencies]
 sdl2 = "0.9"
-byteorder = "0.3"

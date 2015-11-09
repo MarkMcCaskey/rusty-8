@@ -7,8 +7,6 @@ use sdl2::keyboard::Scancode;*/
 use std::collections::HashSet;
 use std::ops;
 use std::path::Path;
-extern crate byteorder;
-use byteorder::{BigEndian,ReadBytesExt};
 
 mod state;
 
