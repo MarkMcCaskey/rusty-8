@@ -1,3 +1,5 @@
+use std::mem;
+
 pub struct State {
     memory:         [i8; 4096],
     registers:      [i8; 16],
@@ -8,16 +10,33 @@ pub struct State {
     program_counter: i16,
 }
 
+/*pub fn create_state() -> State
+{
+    let mut state :State;
+    state.delay_timer = 0;
+    state.sound_timer = 0;
+    state.stack_pointer = 0;
+    state.program_counter = 0x200;
+    state.memory = [0, ..4096];
+    state
+}*/
+
+impl Default for State {
+    #[inline]
+    fn default() -> State {
+        State { memory: unsafe {mem::zeroed()},
+                registers: unsafe {mem::zeroed()},
+                stack: unsafe {mem::zeroed()},
+                delay_timer: 0,
+                sound_timer: 0,
+                stack_pointer: 0,
+                program_counter: 0x200
+        }
+    }
+}
+
 impl State {
 
-    pub fn initialize(&mut self, memory: [i8;4096])
-    {
-        self.memory = memory;
-        self.delay_timer = 0;
-        self.sound_timer = 0;
-        self.stack_pointer = 0;
-        self.program_counter = 0x200;
-    }
     
     fn dispatch(&mut self, opcode: i16) {
         let b = ((opcode & 0x0F00) >> 8) as i8;

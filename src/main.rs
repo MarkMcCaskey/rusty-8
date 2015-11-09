@@ -38,7 +38,7 @@ fn graphics_loop() {
 */
 
 fn main() {
-    let mut state: state::State; 
+    let mut state: state::State = Default::default(); 
     let args: Vec<_> = env::args().collect();
 
     if( args.len() < 2 )
@@ -53,7 +53,7 @@ fn main() {
 //        .expect("Unable to open file");
 
     let in_vals = fin.read_i16::<BigEndian>().unwrap();
-    state.initialize([0] as [i8;4096]);
+//    state.initialize([0; 4096]);
 
     //start loop here
     state.run_opcode();
