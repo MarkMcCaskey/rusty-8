@@ -2,8 +2,10 @@ use std::mem;
 use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
 use std::collections::HashSet;
+use rand::Rng;
 
 extern crate sdl2;
+extern crate rand;
 
 pub struct State {
     pub memory:     [u8; 4096],
@@ -14,6 +16,7 @@ pub struct State {
     stack_pointer:   u16,
     program_counter: u16,
     I:               u16,
+    screen:         [[bool; 64]; 32]
 }
 
 impl Default for State {
@@ -27,7 +30,8 @@ impl Default for State {
             sound_timer:     0,
             stack_pointer:   0,
             program_counter: 0x200,
-            I:               0
+            I:               0,
+            screen:          unsafe { mem::zeroed() }
         }
     }
 }
@@ -58,7 +62,7 @@ impl State {
             9  => self.skip_if_xneqy( x, y),
             10 => self.I = bcd,
             11 => self.program_counter = bcd + (self.registers[0] as u16),
-            12 => panic!("Opcode 0xCXXX not implemented!"),//random number stuff later
+            12 => self.random( opcode ),
             13 => panic!("Opcode 0xDXXX not implemented!"),
             14 => panic!("Opcode 0xEXXX not implemented!"),
             15 => self.f_dispatcher( opcode ),
@@ -83,6 +87,15 @@ impl State {
             _    => panic!("Opcode {} not recognized", opcode)
              
         }
+    }
+
+    fn random(&mut self, opcode: u16)
+    {
+        let x    = ((opcode >> 8) & 0xF) as usize;
+        let mask = (opcode & 0xFF) as u8;
+        let mut rng = rand::thread_rng();
+
+        self.registers[x] = rng.gen::<u8>() & mask;
     }
 
     fn store_bcd(&mut self, x: usize)
@@ -112,8 +125,12 @@ impl State {
         }
     }
 
-    fn clear_screen(&self) {
-        panic!("Clear screen not implemented!");
+    fn clear_screen(&mut self) {
+        for i in self.screen.iter_mut()  {
+            for j in i.iter_mut() {
+                *j = false;
+            }
+        }
     }
 
     pub fn run_opcode(&mut self) {
@@ -155,7 +172,7 @@ impl State {
     }
 
     fn arithmetic_four(&mut self, x: usize, y: usize) {
-	// Stores Vy + Vx into Vx and sets VF = carry      
+	// Stores Vy + Vx into Vx and sets VF = carry  
         let xl = self.registers[x] as u16;
         let yl = self.registers[y] as u16;
         self.registers[x] += self.registers[y];
@@ -163,7 +180,6 @@ impl State {
             self.registers[0xF]=1
         }
     }
-
     
     fn arithmetic_five(&mut self, x: usize, y: usize) {
         if self.registers[x] > self.registers[y] {
@@ -172,13 +188,11 @@ impl State {
         self.registers[x] -= self.registers[y];
     }
 
-
     //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
     fn arithmetic_six(&mut self, x: usize) {
         self.registers[0xF] = self.registers[x] & 0x1;
         self.registers[x] >> 1;
     }
-
 
     fn arithmetic_seven(&mut self, x: usize, y: usize) {
         if self.registers[x] < self.registers[y] {

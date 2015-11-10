@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::fs::File;
 
 extern crate sdl2;
+extern crate rand;
 
 mod state;
 
