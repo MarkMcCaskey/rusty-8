@@ -1,4 +1,9 @@
 use std::mem;
+use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
+use std::collections::HashSet;
+
+extern crate sdl2;
 
 pub struct State {
     pub memory:     [u8; 4096],
@@ -8,19 +13,21 @@ pub struct State {
     sound_timer:     u8,
     stack_pointer:   u16,
     program_counter: u16,
+    I:               u16,
 }
 
 impl Default for State {
     #[inline]
     fn default() -> State {
         State {
-            memory:    unsafe { mem::zeroed() },
-            registers: unsafe { mem::zeroed() },
-            stack:     unsafe { mem::zeroed() },
-            delay_timer: 0,
-            sound_timer: 0,
-            stack_pointer: 0,
-            program_counter: 0x200
+            memory:          unsafe { mem::zeroed() },
+            registers:       unsafe { mem::zeroed() },
+            stack:           unsafe { mem::zeroed() },
+            delay_timer:     0,
+            sound_timer:     0,
+            stack_pointer:   0,
+            program_counter: 0x200,
+            I:               0
         }
     }
 }
@@ -49,7 +56,7 @@ impl State {
             7  => self.registers[x] +=  cd,
             8  => self.arithmetic_dispatch( opcode ),
             9  => self.skip_if_xneqy( x, y),
-            10 => self.program_counter = bcd,
+            10 => self.I = bcd,
             11 => self.program_counter = bcd + (self.registers[0] as u16),
             12 => panic!("Opcode 0xCXXX not implemented!"),//random number stuff later
             13 => panic!("Opcode 0xDXXX not implemented!"),
@@ -68,12 +75,40 @@ impl State {
             0x0A => panic!("Opcode FXXA not implemented!"),
             0x15 => self.delay_timer = self.registers[x],
             0x18 => self.sound_timer = self.registers[x],
-            0x1E => self.program_counter += self.registers[x] as u16,
-            0x29 => panic!("Opcode FX29 not implemented!"),
-            0x33 => panic!("Opcode FX33 not implemented!"),
-            0x55 => panic!("Opcode FX55 not implemented!"),
+            0x1E => self.I += self.registers[x] as u16,
+            0x29 => self.I = (self.registers[x] as u16)*4,
+            0x33 => self.store_bcd(x),
+            0x55 => self.store_registers(),
+            0x65 => self.load_registers(),
             _    => panic!("Opcode {} not recognized", opcode)
              
+        }
+    }
+
+    fn store_bcd(&mut self, x: usize)
+    {
+        let one = self.registers[x] / 100;
+        let two = (self.registers[x] % 100) / 10;
+        let three = self.registers[x] % 10;
+        
+        self.memory[self.I as usize] = one;
+        self.memory[(self.I+1) as usize] = two;
+        self.memory[(self.I+2) as usize] = three;
+    }
+    
+    fn store_registers(&mut self)
+    {
+        for i in 0..15 {
+            self.memory[(self.I + i) as usize]
+                = self.registers[i as usize];
+        }
+    }
+
+    fn load_registers(&mut self)
+    {
+        for i in 0..15 {
+            self.registers[i as usize] =
+                self.memory[(self.I + i) as usize];
         }
     }
 
@@ -87,7 +122,17 @@ impl State {
             (self.program_counter-2) as usize] as u16; 
         let second_byte = self.memory[
             (self.program_counter-1) as usize] as u16;
+        //DEBUG:
+        println!( "Running opcode: {:X}", (second_byte | (first_byte << 8)));
         self.dispatch( second_byte | (first_byte << 8) );
+    }
+
+    pub fn next_opcode(&self) -> u16 {
+        let fb = self.memory[(self.program_counter+1)
+                             as usize] as u16;
+        let sb = self.memory[self.program_counter
+                              as usize] as u16;
+        fb | (sb << 8)
     }
 
     fn arithmetic_dispatch(&mut self, opcode: u16 ) {
@@ -188,5 +233,60 @@ impl State {
             self.stack[self.stack_pointer as usize];
         self.stack_pointer-=1;
     }
-}
+    // IO code needs a lot of review, commenting it out for now
+    fn pressed_scancode_set(e: &sdl2::EventPump)
+                            -> HashSet<Scancode> {
+        e.keyboard_state().pressed_scancodes().collect()
+    }
 
+    /*fn pressed_keycode_set(e: &sdl2::EventPump) -> HashSet <Keycode> {
+    e.keyboard_state().pressed_scancodes()
+    .filter_map(Keycode::from_scancode())
+    .collect()
+}*/
+    
+    fn newly_pressed(old: &HashSet<Scancode>, new: &HashSet<Scancode>)
+                     -> HashSet<Scancode> {
+        new - old
+    }
+    
+    /*fn graphics_loop() {
+    let surface = sdl2::Surface::new(64,32, sdl2::Pixels::PixelFormatEnum::Index1LSB);
+    let render_context = sdl2::render::from_surface(surface);  
+}*/
+    pub fn graphics(&self) {
+    }
+
+    pub fn load_font(&mut self)
+    {
+        let zero  = [0xF0, 0x90, 0x90, 0x90, 0xF0];
+        let one   = [0x20, 0x60, 0x20, 0x20, 0x70];
+        let two   = [0xF0, 0x10, 0xF0, 0x80, 0xF0];
+        let three = [0xF0, 0x10, 0xF0, 0x10, 0xF0];
+        let four  = [0x90, 0x90, 0xF0, 0x10, 0x10];
+        let five  = [0xF0, 0x80, 0xF0, 0x10, 0xF0];
+        let six   = [0xF0, 0x80, 0xF0, 0x90, 0xF0];
+        let seven = [0xF0, 0x10, 0x20, 0x40, 0x40];
+        let eight = [0xF0, 0x90, 0xF0, 0x90, 0xF0];
+        let nine  = [0xF0, 0x90, 0xF0, 0x10, 0xF0];
+        let a     = [0xF0, 0x90, 0xF0, 0x90, 0x90];
+        let b     = [0xE0, 0x90, 0xE0, 0x90, 0xE0];
+        let c     = [0xF0, 0x80, 0x80, 0x80, 0xF0];
+        let d     = [0xE0, 0x90, 0x90, 0x90, 0xE0];
+        let e     = [0xF0, 0x80, 0xF0, 0x80, 0xF0];
+        let f     = [0xF0, 0x80, 0xF0, 0x80, 0x80];
+
+        let font_list = [zero, one, two, three, four,
+                         five, six, seven, eight, nine,
+                         a, b, c, d, e, f];
+
+        let mut i = 0;
+        for &x in font_list.iter() {
+            for &n in x.iter() {
+                self.memory[i] = n;
+                i += 1;
+            }
+        }
+    }
+    
+}
