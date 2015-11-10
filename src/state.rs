@@ -1,4 +1,6 @@
 use std::mem;
+use sdl2::pixels::Color;
+use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
 use std::collections::HashSet;
@@ -63,7 +65,7 @@ impl State {
             10 => self.I = bcd,
             11 => self.program_counter = bcd + (self.registers[0] as u16),
             12 => self.random( opcode ),
-            13 => panic!("Opcode 0xDXXX not implemented!"),
+            13 => self.display_sprite( opcode ),
             14 => panic!("Opcode 0xEXXX not implemented!"),
             15 => self.f_dispatcher( opcode ),
             _  => panic!("Opcode {} not recognized", opcode)
@@ -133,6 +135,36 @@ impl State {
         }
     }
 
+    fn display_sprite(&mut self, opcode: u16)
+    {
+        let x     = ((opcode >> 8) & 0xF) as usize;
+        let y     = ((opcode >> 4) & 0xF) as usize;
+        let n     = ( opcode       & 0xF) as usize;
+        let start = self.I                as usize;
+
+        let mut xdraw = self.registers[x] as usize;
+        let mut ydraw = self.registers[y] as usize;
+
+        for i in start..(start + n) {
+            //draw pixel
+            match self.memory[i] {
+                0 => {/* do nothing*/},
+                _ => {
+                    if self.screen[x][y] {
+                        self.registers[0xF] = 1;
+                    }
+                    self.screen[x][y] = !self.screen[x][y]
+                }
+            }
+
+            //increment coordinates
+            if xdraw >= 63 { xdraw  = 0; }
+            else           { xdraw += 1; }
+            if ydraw >= 31 { ydraw  = 0; }
+            else           { ydraw += 1; }
+        }
+    }
+    
     pub fn run_opcode(&mut self) {
         self.increment_pc();
         let first_byte = self.memory[
@@ -269,6 +301,46 @@ impl State {
     let render_context = sdl2::render::from_surface(surface);  
 }*/
     pub fn graphics(&self) {
+        let sdl_context = sdl2::init()
+            .unwrap();
+
+        let video_subsystem = sdl_context
+            .video()
+            .unwrap();
+
+        let window = video_subsystem
+            .window("Chip-8 emulator", 800, 600)
+            .position_centered()
+            .opengl()
+            .build()
+            .unwrap();
+
+        let mut renderer = window
+            .renderer()
+            .build()
+            .unwrap();
+
+        renderer.set_draw_color(Color::RGB(0,0,0));
+        renderer.clear();
+        renderer.present();
+
+        let mut event_pump = sdl_context
+            .event_pump()
+            .unwrap();
+
+        'running: loop {
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit {..}
+                    | Event::KeyDown {
+                        keycode: Some(Keycode::Escape),..}
+                    => {
+                        break 'running
+                    },
+                    _ => {}
+                }
+            }
+        }
     }
 
     pub fn load_font(&mut self)
