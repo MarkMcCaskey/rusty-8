@@ -64,7 +64,7 @@ impl State {
             11 => self.program_counter = bcd + (self.registers[0] as u16),
             12 => self.random( opcode ),
             13 => self.display_sprite( opcode ),
-            14 => panic!("Opcode 0xEXXX not implemented!"),
+            14 => self.input_disp( opcode ),
             15 => self.f_dispatcher( opcode ),
             _  => panic!("Opcode {} not recognized", opcode)
         }
@@ -131,6 +131,7 @@ impl State {
                 *j = false;
             }
         }
+        self.graphics.clear_screen();
     }
 
     fn display_sprite(&mut self, opcode: u16)
@@ -151,7 +152,9 @@ impl State {
                     if self.screen[x][y] {
                         self.registers[0xF] = 1;
                     }
-                    self.screen[x][y] = !self.screen[x][y]
+                    self.screen[x][y] = !self.screen[x][y];
+                    self.graphics
+                        .draw_point(x as i32,y as i32);
                 }
             }
 
@@ -161,6 +164,7 @@ impl State {
             if ydraw >= 31 { ydraw  = 0; }
             else           { ydraw += 1; }
         }
+        self.graphics.draw_screen();
     }
     
     pub fn run_opcode(&mut self) {
@@ -276,6 +280,31 @@ impl State {
         self.program_counter =
             self.stack[self.stack_pointer as usize];
         self.stack_pointer-=1;
+    }
+
+    fn input_disp(&mut self, opcode: u16) {
+        let x  = ((opcode >> 8) & 0xF) as usize;
+        let bc =  opcode & 0xFF;
+
+        match bc {
+            0x9E => self.skip_if_pressed(x),
+            0xA1 => self.skip_ifn_pressed(x),
+            _    => panic!("Unrecognized opcode")
+        }
+    }
+
+    fn skip_if_pressed(&mut self, x: usize )
+    {
+        if self.graphics.is_pressed(self.registers[x]) {
+            self.increment_pc();
+        }
+    }
+
+    fn skip_ifn_pressed(&mut self, x: usize )
+    {
+        if !self.graphics.is_pressed(self.registers[x]) {
+            self.increment_pc();
+        }
     }
 
     pub fn load_font(&mut self)

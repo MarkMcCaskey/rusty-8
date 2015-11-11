@@ -9,12 +9,13 @@ mod state;
 mod graphics;
 
 fn main() {
-    let mut state: state::State = Default::default(); 
+    let mut state: state::State;
     let args: Vec<_> = env::args().collect();
 
     if args.len() < 2 
     {
-        print!("Enter the name of a file to run");
+        println!("Enter the name of a file to run");
+        //fix error message
         std::process::exit(1);
     }
     
@@ -22,6 +23,8 @@ fn main() {
     let fin = File::open(arg)
         .ok()
         .expect("File not found");
+
+    state = Default::default(); 
 
     let mut i = 0x200;
     for x in fin.bytes() {
@@ -37,6 +40,7 @@ fn main() {
         state.run_opcode();
         //render and other IO stuff here?
       //  state.graphics();
+        std::thread::sleep_ms(100);
     }
     
     println!("Hello, world!");
