@@ -6,6 +6,7 @@ extern crate sdl2;
 extern crate rand;
 
 mod state;
+mod graphics;
 
 fn main() {
     let mut state: state::State = Default::default(); 
@@ -35,7 +36,7 @@ fn main() {
     while state.next_opcode() != 0 {
         state.run_opcode();
         //render and other IO stuff here?
-        state.graphics();
+      //  state.graphics();
     }
     
     println!("Hello, world!");

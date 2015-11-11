@@ -1,10 +1,6 @@
 use std::mem;
-use sdl2::pixels::Color;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
-use std::collections::HashSet;
 use rand::Rng;
+use graphics;
 
 extern crate sdl2;
 extern crate rand;
@@ -18,7 +14,8 @@ pub struct State {
     stack_pointer:   u16,
     program_counter: u16,
     I:               u16,
-    screen:         [[bool; 64]; 32]
+    screen:         [[bool; 64]; 32],
+    graphics:        graphics::Graphics
 }
 
 impl Default for State {
@@ -33,7 +30,8 @@ impl Default for State {
             stack_pointer:   0,
             program_counter: 0x200,
             I:               0,
-            screen:          unsafe { mem::zeroed() }
+            screen:          unsafe { mem::zeroed() },
+            graphics:        Default::default()
         }
     }
 }
@@ -42,10 +40,10 @@ impl State {
     fn dispatch(&mut self, opcode: u16) {
         let b = ((opcode & 0x0F00) >> 8) as u8;
         let c = ((opcode & 0x00F0) >> 4) as u8; 
-        let x = b as usize;
-        let y = c as usize;
-        let bcd = (opcode & 0xFFF) as u16;
-        let cd  = (opcode & 0xFF) as u8;
+        let x = b                        as usize;
+        let y = c                        as usize;
+        let bcd = (opcode & 0xFFF)       as u16;
+        let cd  = (opcode & 0xFF)        as u8;
         
         match (opcode & 0xF000) >> 12  {
             0 => match opcode {
@@ -278,69 +276,6 @@ impl State {
         self.program_counter =
             self.stack[self.stack_pointer as usize];
         self.stack_pointer-=1;
-    }
-    // IO code needs a lot of review, commenting it out for now
-    fn pressed_scancode_set(e: &sdl2::EventPump)
-                            -> HashSet<Scancode> {
-        e.keyboard_state().pressed_scancodes().collect()
-    }
-
-    /*fn pressed_keycode_set(e: &sdl2::EventPump) -> HashSet <Keycode> {
-    e.keyboard_state().pressed_scancodes()
-    .filter_map(Keycode::from_scancode())
-    .collect()
-}*/
-    
-    fn newly_pressed(old: &HashSet<Scancode>, new: &HashSet<Scancode>)
-                     -> HashSet<Scancode> {
-        new - old
-    }
-    
-    /*fn graphics_loop() {
-    let surface = sdl2::Surface::new(64,32, sdl2::Pixels::PixelFormatEnum::Index1LSB);
-    let render_context = sdl2::render::from_surface(surface);  
-}*/
-    pub fn graphics(&self) {
-        let sdl_context = sdl2::init()
-            .unwrap();
-
-        let video_subsystem = sdl_context
-            .video()
-            .unwrap();
-
-        let window = video_subsystem
-            .window("Chip-8 emulator", 800, 600)
-            .position_centered()
-            .opengl()
-            .build()
-            .unwrap();
-
-        let mut renderer = window
-            .renderer()
-            .build()
-            .unwrap();
-
-        renderer.set_draw_color(Color::RGB(0,0,0));
-        renderer.clear();
-        renderer.present();
-
-        let mut event_pump = sdl_context
-            .event_pump()
-            .unwrap();
-
-        'running: loop {
-            for event in event_pump.poll_iter() {
-                match event {
-                    Event::Quit {..}
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),..}
-                    => {
-                        break 'running
-                    },
-                    _ => {}
-                }
-            }
-        }
     }
 
     pub fn load_font(&mut self)
