@@ -30,6 +30,7 @@ fn main() {
     for x in fin.bytes() {
         state.memory[i] = x.unwrap();
         //DEBUG:
+        
         println!( "{:X} at {}", state.memory[i], i );
         i+=1;
     }
@@ -41,8 +42,7 @@ fn main() {
         //render and other IO stuff here?
       //  state.graphics();
         std::thread::sleep_ms(100);
+        state.advance_timer();
     }
-    
-    println!("Hello, world!");
     std::process::exit(0);
 }

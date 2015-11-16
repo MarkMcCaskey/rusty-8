@@ -7,7 +7,7 @@ extern crate rand;
 
 pub struct State {
     pub memory:     [u8; 4096],
-    registers:      [u8; 16],
+    pub registers:      [u8; 16], // change later
     stack:          [u16;16],
     delay_timer:     u8,
     sound_timer:     u8,
@@ -84,15 +84,15 @@ impl State {
             0x33 => self.store_bcd(x),
             0x55 => self.store_registers(),
             0x65 => self.load_registers(),
-            _    => panic!("Opcode {} not recognized", opcode)
+            _    => panic!("Opcode {:X} not recognized", opcode)
              
         }
     }
 
     fn random(&mut self, opcode: u16)
     {
-        let x    = ((opcode >> 8) & 0xF) as usize;
-        let mask = (opcode & 0xFF) as u8;
+        let x       = ((opcode >> 8) & 0xF)  as usize;
+        let mask    =  (opcode       & 0xFF) as u8;
         let mut rng = rand::thread_rng();
 
         self.registers[x] = rng.gen::<u8>() & mask;
@@ -100,11 +100,11 @@ impl State {
 
     fn store_bcd(&mut self, x: usize)
     {
-        let one = self.registers[x] / 100;
-        let two = (self.registers[x] % 100) / 10;
-        let three = self.registers[x] % 10;
+        let one   =  self.registers[x] / 100;
+        let two   = (self.registers[x] % 100) / 10;
+        let three =  self.registers[x] % 10;
         
-        self.memory[self.I as usize] = one;
+        self.memory[ self.I    as usize] = one;
         self.memory[(self.I+1) as usize] = two;
         self.memory[(self.I+2) as usize] = three;
     }
@@ -153,8 +153,8 @@ impl State {
                         self.registers[0xF] = 1;
                     }
                     self.screen[x][y] = !self.screen[x][y];
-                    self.graphics
-                        .draw_point(x as i32,y as i32);
+                    //self.graphics
+                     //   .draw_point(x as i32,y as i32);
                 }
             }
 
@@ -164,6 +164,9 @@ impl State {
             if ydraw >= 31 { ydraw  = 0; }
             else           { ydraw += 1; }
         }
+        self.graphics
+            .draw_point(self.screen);
+
         self.graphics.draw_screen();
     }
     
@@ -174,6 +177,11 @@ impl State {
         let second_byte = self.memory[
             (self.program_counter-1) as usize] as u16;
         //DEBUG:
+        println!( "registers:" );
+        for j in self.registers.iter() {
+            print!( "{:X} ", j );
+        }
+        print!("\n");
         println!( "Running opcode: {:X}", (second_byte | (first_byte << 8)));
         self.dispatch( second_byte | (first_byte << 8) );
     }
@@ -272,7 +280,7 @@ impl State {
     fn call_op( &mut self, address: u16 ) {
         self.stack[self.stack_pointer as usize] =
             self.program_counter;
-
+        self.stack_pointer+=1;
         self.program_counter = address;
     }
 
@@ -305,6 +313,14 @@ impl State {
         if !self.graphics.is_pressed(self.registers[x]) {
             self.increment_pc();
         }
+    }
+
+    pub fn advance_timer(&mut self)
+    {
+        if self.sound_timer > 0
+            {self.sound_timer-=1;}
+        if self.delay_timer > 0
+            {self.delay_timer-=1;}
     }
 
     pub fn load_font(&mut self)

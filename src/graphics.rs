@@ -81,37 +81,53 @@ impl Graphics {
         let mut kc: Keycode;
         for event in self.event_pump.poll_iter() {
             match event {
-                Event::KeyDown { keycode: Some(Keycode::Num0),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num0),.. }
                 => { kc = Keycode::Num0 },
-                Event::KeyDown { keycode: Some(Keycode::Num1),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num1),.. }
                 => { kc = Keycode::Num1 },
-                Event::KeyDown { keycode: Some(Keycode::Num2),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num2),.. }
                 => { kc = Keycode::Num2 },
-                Event::KeyDown { keycode: Some(Keycode::Num3),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num3),.. }
                 => { kc = Keycode::Num3 },
-                Event::KeyDown { keycode: Some(Keycode::Num4),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num4),.. }
                 => { kc = Keycode::Num4 },
-                Event::KeyDown { keycode: Some(Keycode::Num5),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num5),.. }
                 => { kc = Keycode::Num5 },
-                Event::KeyDown { keycode: Some(Keycode::Num6),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num6),.. }
                 => { kc = Keycode::Num6 },
-                Event::KeyDown { keycode: Some(Keycode::Num7),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num7),.. }
                 => { kc = Keycode::Num7 },
-                Event::KeyDown { keycode: Some(Keycode::Num8),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num8),.. }
                 => { kc = Keycode::Num8 },
-                Event::KeyDown { keycode: Some(Keycode::Num9),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::Num9),.. }
                 => { kc = Keycode::Num9 },
-                Event::KeyDown { keycode: Some(Keycode::A),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::A),.. }
                 => { kc = Keycode::A },
-                Event::KeyDown { keycode: Some(Keycode::B),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::B),.. }
                 => { kc = Keycode::B },
-                Event::KeyDown { keycode: Some(Keycode::C),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::C),.. }
                 => { kc = Keycode::C },
-                Event::KeyDown { keycode: Some(Keycode::D),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::D),.. }
                 => { kc = Keycode::D },
-                Event::KeyDown { keycode: Some(Keycode::E),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::E),.. }
                 => { kc = Keycode::E },
-                Event::KeyDown { keycode: Some(Keycode::F),.. }
+                Event::KeyDown { keycode:
+                                 Some(Keycode::F),.. }
                 => { kc = Keycode::F },
                 _ => { /* do nothing */
                 kc = Keycode::G}
@@ -125,11 +141,20 @@ impl Graphics {
     }
 
 
-    pub fn draw_point(&mut self, x: i32, y:i32) {
+    pub fn draw_point(&mut self, screen: [[bool; 64]; 32]) {
         self.renderer.set_draw_color(
             Color::RGB(255,255,255));
-        self.renderer.draw_point(
-            sdl2::rect::Point::new(x,y) );
+        for i in 0..64 {
+            for j in 0..32 {
+                if screen[j][i] {
+                    self.renderer.draw_point(
+                        sdl2::rect::Point::new(i as i32,j as i32) );
+
+                }
+            }
+        }
+        //self.renderer.draw_point(
+        //    sdl2::rect::Point::new(x,y) );
     }
 
     pub fn draw_screen(&mut self) {
@@ -142,8 +167,7 @@ impl Graphics {
         self.renderer.clear();
     }
 
-    // IO code needs a lot of review, commenting it out for now
-    fn pressed_scancode_set(e: &sdl2::EventPump)
+    /*fn pressed_scancode_set(e: &sdl2::EventPump)
                             -> HashSet<Scancode> {
         e.keyboard_state().pressed_scancodes().collect()
     }
@@ -159,7 +183,7 @@ impl Graphics {
                      -> HashSet<Scancode> {
         new - old
     }
-    
+ */   
 }
 
 fn lookup_keycode(key: u8) -> Keycode {
