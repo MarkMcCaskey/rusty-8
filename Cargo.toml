@@ -1,6 +1,6 @@
 [package]
-name = "rusty-8"
-version = "0.1.0"
+name = "rusty8"
+version = "0.1.1"
 authors = ["Mark McCaskey <mmccask2@gmu.edu>"]
 [dependencies]
 sdl2 = "0.9"

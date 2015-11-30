@@ -1,6 +1,7 @@
 use std::mem;
 use rand::Rng;
 use graphics;
+use std::intrinsics::drop_in_place;
 
 extern crate sdl2;
 extern crate rand;
@@ -355,4 +356,39 @@ impl State {
         }
     }
     
+}
+
+#[test]
+fn it_works() {
+}
+
+#[test]
+fn addition() {
+    let mut state: State;
+    state = Default::default();
+
+    state.dispatch(0x6000); //a = 0
+    state.dispatch(0x6100); //b = 0
+    state.dispatch(0x7110); //b+=16
+    state.dispatch(0x700A); //a+=10
+    state.dispatch(0x7004); //a+=4
+    state.dispatch(0x8014); //a+=b (30)
+    state.dispatch(0x8104); //b+=a (46)
+
+    assert_eq!(state.registers[1],46);
+    state.drop();
+}
+
+#[test]
+fn subtraction() {
+    let mut state: State;
+    state = Default::default();
+    
+    state.dispatch(0x60F0); //a = 240
+    state.dispatch(0x61FF); //b = 255
+    state.dispatch(0x7001); //a+=1 (241)
+    state.dispatch(0x8105); //b-=a (14)
+
+    assert_eq!(state.registers[1],0xE);
+    state.drop();
 }
