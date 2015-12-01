@@ -36,6 +36,7 @@ fn main() {
     }
 
     state.load_font();
+    state.initialize_graphics();
 
     while state.next_opcode() != 0 {
         state.run_opcode();

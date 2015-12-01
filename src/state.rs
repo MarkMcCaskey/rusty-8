@@ -1,7 +1,6 @@
 use std::mem;
 use rand::Rng;
 use graphics;
-use std::intrinsics::drop_in_place;
 
 extern crate sdl2;
 extern crate rand;
@@ -16,7 +15,7 @@ pub struct State {
     program_counter: u16,
     I:               u16,
     screen:         [[bool; 64]; 32],
-    graphics:        graphics::Graphics
+    graphics:        Option<graphics::Graphics>
 }
 
 impl Default for State {
@@ -32,7 +31,7 @@ impl Default for State {
             program_counter: 0x200,
             I:               0,
             screen:          unsafe { mem::zeroed() },
-            graphics:        Default::default()
+            graphics:        None
         }
     }
 }
@@ -132,7 +131,12 @@ impl State {
                 *j = false;
             }
         }
-        self.graphics.clear_screen();
+
+        if let Some(ref mut graphics) = self.graphics {
+            graphics.clear_screen();
+        } else {
+            panic!("Graphics have not been initialized");
+        }
     }
 
     fn display_sprite(&mut self, opcode: u16)
@@ -165,10 +169,13 @@ impl State {
             if ydraw >= 31 { ydraw  = 0; }
             else           { ydraw += 1; }
         }
-        self.graphics
-            .draw_point(self.screen);
 
-        self.graphics.draw_screen();
+        if let Some(ref mut graphics) = self.graphics {
+            graphics.draw_point(self.screen);
+            graphics.draw_screen();
+        } else {
+            panic!("Graphics not initalized!");
+        }
     }
     
     pub fn run_opcode(&mut self) {
@@ -304,14 +311,34 @@ impl State {
 
     fn skip_if_pressed(&mut self, x: usize )
     {
-        if self.graphics.is_pressed(self.registers[x]) {
+        let mut i = 0;
+        if let Some(ref mut graphics) = self.graphics {
+            if graphics.is_pressed(self.registers[x]) {
+                i = 1; }
+        } else {
+            panic!("Graphics not initialized!");
+        }
+
+        //Rust won't allow for multilpe borrows
+        //and I don't know how else to do this
+        //This is bad code, I don't know how to avoid
+        //it though.
+        if i == 1 
+        {
             self.increment_pc();
         }
     }
 
     fn skip_ifn_pressed(&mut self, x: usize )
     {
-        if !self.graphics.is_pressed(self.registers[x]) {
+        let mut i = 0;
+        if let Some(ref mut graphics) = self.graphics {
+            if !graphics.is_pressed(self.registers[x]) {
+                i = 1; }
+        } else {
+            panic!("Graphics not initialized!");
+        }
+        if i == 1 {
             self.increment_pc();
         }
     }
@@ -322,6 +349,11 @@ impl State {
             {self.sound_timer-=1;}
         if self.delay_timer > 0
             {self.delay_timer-=1;}
+    }
+
+    pub fn initialize_graphics(&mut self)
+    {
+        self.graphics = Some(Default::default());
     }
 
     pub fn load_font(&mut self)
@@ -376,7 +408,6 @@ fn addition() {
     state.dispatch(0x8104); //b+=a (46)
 
     assert_eq!(state.registers[1],46);
-    state.drop();
 }
 
 #[test]
@@ -390,5 +421,4 @@ fn subtraction() {
     state.dispatch(0x8105); //b-=a (14)
 
     assert_eq!(state.registers[1],0xE);
-    state.drop();
 }
