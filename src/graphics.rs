@@ -27,7 +27,7 @@ impl Default for Graphics {
             .unwrap();
         
         let win = video_sub
-            .window("Chip-8 emulator", 800, 600)
+            .window("Chip-8 emulator", 512, 256)
             .position_centered()
             .opengl()
             .build()
@@ -141,20 +141,18 @@ impl Graphics {
     }
 
 
-    pub fn draw_point(&mut self, screen: [[bool; 64]; 32]) {
+    pub fn draw_point(&mut self, x: usize, y:usize, on: bool) {
         self.renderer.set_draw_color(
-            Color::RGB(255,255,255));
-        for i in 0..64 {
-            for j in 0..32 {
-                if screen[j][i] {
-                    self.renderer.draw_point(
-                        sdl2::rect::Point::new(i as i32,j as i32) );
+            match on {
+                true  => Color::RGB(255,255,255),
+                false => Color::RGB(0,  0,  0  )
+            });
+        print!("DRAWING AT ({},{}) to {}\n", x, y, on);
+        self.renderer
+            .draw_point(sdl2::rect::Point::new(
+                x as i32,
+                y as i32));
 
-                }
-            }
-        }
-        //self.renderer.draw_point(
-        //    sdl2::rect::Point::new(x,y) );
     }
 
     pub fn draw_screen(&mut self) {
@@ -164,7 +162,13 @@ impl Graphics {
     pub fn clear_screen(&mut self) {
         self.renderer.set_draw_color(
             Color::RGB(0,0,0));
+        for x in 0..64 {
+            for y in 0..32 {
+                self.draw_point(x,y,false);
+            }
+        }
         self.renderer.clear();
+        self.renderer.present();
     }
 
     /*fn pressed_scancode_set(e: &sdl2::EventPump)

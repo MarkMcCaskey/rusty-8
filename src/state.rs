@@ -57,7 +57,9 @@ impl State {
             4  => self.skip_if_neq( x, cd ),
             5  => self.skip_if_xeqy( x, y ),
             6  => self.registers[x]  =  cd,
-            7  => self.registers[x] +=  cd,
+            7  => self.registers[x] =
+                (self.registers[x] as u16 +  cd as u16)
+                as u8,
             8  => self.arithmetic_dispatch( opcode ),
             9  => self.skip_if_xneqy( x, y),
             10 => self.I = bcd,
@@ -76,17 +78,68 @@ impl State {
 
         match opcode & 0xFF {
             0x07 => self.registers[x] = self.delay_timer,
-            0x0A => panic!("Opcode FXXA not implemented!"),
+            0x0A => self.wait_for_key_press(x),
             0x15 => self.delay_timer = self.registers[x],
             0x18 => self.sound_timer = self.registers[x],
             0x1E => self.I += self.registers[x] as u16,
-            0x29 => self.I = (self.registers[x] as u16)*4,
+            0x29 => self.I = (self.registers[x] as u16)*5,
             0x33 => self.store_bcd(x),
             0x55 => self.store_registers(),
             0x65 => self.load_registers(),
             _    => panic!("Opcode {:X} not recognized", opcode)
              
         }
+    }
+
+    fn wait_for_key_press(&mut self, x: usize )
+    {
+        let mut found = false;
+        let mut s = 0;
+        if let Some(ref mut graphics) = self.graphics {
+            while( ! found )
+            {
+                //I really need to learn how to use Rust
+                //properly
+                if graphics.is_pressed(0)
+                { s = 0; found = true; }
+                else if graphics.is_pressed(1)
+                { s = 1; found = true; }
+                else if graphics.is_pressed(2)
+                { s = 2; found = true; }
+                else if graphics.is_pressed(3)
+                { s = 3; found = true; }
+                else if graphics.is_pressed(4)
+                { s = 4; found = true; }
+                else if graphics.is_pressed(5)
+                { s = 5; found = true; }
+                else if graphics.is_pressed(6)
+                { s = 6; found = true; }
+                else if graphics.is_pressed(7)
+                { s = 7; found = true; }
+                else if graphics.is_pressed(8)
+                { s = 8; found = true; }
+                else if graphics.is_pressed(9)
+                { s = 9; found = true; }
+                else if graphics.is_pressed(10)
+                { s = 10; found = true; }
+                else if graphics.is_pressed(11)
+                { s = 11; found = true; }
+                else if graphics.is_pressed(12)
+                { s = 12; found = true; }
+                else if graphics.is_pressed(13)
+                { s = 13; found = true; }
+                else if graphics.is_pressed(14)
+                { s = 14; found = true; }
+                else if graphics.is_pressed(15)
+                { s = 15; found = true }
+
+            }
+        } else {
+            panic!("Graphics not initialized!\n");
+        }
+
+        self.registers[x] = s;
+
     }
 
     fn random(&mut self, opcode: u16)
@@ -111,7 +164,7 @@ impl State {
     
     fn store_registers(&mut self)
     {
-        for i in 0..15 {
+        for i in 0..16 {
             self.memory[(self.I + i) as usize]
                 = self.registers[i as usize];
         }
@@ -119,7 +172,7 @@ impl State {
 
     fn load_registers(&mut self)
     {
-        for i in 0..15 {
+        for i in 0..16 {
             self.registers[i as usize] =
                 self.memory[(self.I + i) as usize];
         }
@@ -149,29 +202,46 @@ impl State {
         let mut xdraw = self.registers[x] as usize;
         let mut ydraw = self.registers[y] as usize;
 
+        self.registers[0xF] = 0;
+        
         for i in start..(start + n) {
-            //draw pixel
-            match self.memory[i] {
-                0 => {/* do nothing*/},
-                _ => {
-                    if self.screen[x][y] {
-                        self.registers[0xF] = 1;
-                    }
-                    self.screen[x][y] = !self.screen[x][y];
-                    //self.graphics
-                     //   .draw_point(x as i32,y as i32);
-                }
-            }
+            //draw pixels
 
+            for j in (0..8).rev() {
+                match (self.memory[i] >> j) & 1 {
+                    0 => { /* do nothing */ },
+                    _ => {
+                        if self.screen[ydraw % 32][xdraw % 64] {
+                            self.registers[0xF] = 1;
+                        }
+                        self.screen[ydraw % 32][xdraw % 64]
+                            = !self.screen[ydraw % 32][xdraw % 64];
+                        
+                        if let Some(ref mut graphics)
+                            = self.graphics
+                        {
+                            graphics
+                                .draw_point(xdraw%64 as usize,
+                                            ydraw%32 as usize,
+                                            self.screen[ydraw % 32][xdraw % 64]);
+                        } else {
+                            panic!("Graphics were not initialized!\n");
+                        }
+                    }
+                }
+                if xdraw >= 63 { xdraw  = 0; }
+                else           { xdraw += 1; }
+
+            }
+                
             //increment coordinates
-            if xdraw >= 63 { xdraw  = 0; }
-            else           { xdraw += 1; }
             if ydraw >= 31 { ydraw  = 0; }
             else           { ydraw += 1; }
+            xdraw = self.registers[x] as usize;
         }
 
         if let Some(ref mut graphics) = self.graphics {
-            graphics.draw_point(self.screen);
+         //   graphics.draw_point(self.screen);
             graphics.draw_screen();
         } else {
             panic!("Graphics not initalized!");
@@ -190,7 +260,7 @@ impl State {
             print!( "{:X} ", j );
         }
         print!("\n");
-        println!( "Running opcode: {:X}", (second_byte | (first_byte << 8)));
+        println!( "Running opcode: {:X} at {:X}", (second_byte | (first_byte << 8)), self.program_counter);
         self.dispatch( second_byte | (first_byte << 8) );
     }
 
@@ -223,38 +293,57 @@ impl State {
 
     fn arithmetic_four(&mut self, x: usize, y: usize) {
 	// Stores Vy + Vx into Vx and sets VF = carry  
-        let xl = self.registers[x] as u16;
-        let yl = self.registers[y] as u16;
-        self.registers[x] += self.registers[y];
-        if (xl+yl>>8) > 1 {
+        let mut xl = self.registers[x] as u16;
+        let yl     = self.registers[y] as u16;
+        self.registers[0xF]=0;
+
+        if ((xl+yl)>>8) >= 1 {
             self.registers[0xF]=1
         }
+        xl += yl;
+        self.registers[x] = (xl&0xFF) as u8;
     }
     
     fn arithmetic_five(&mut self, x: usize, y: usize) {
-        if self.registers[x] > self.registers[y] {
+        let mut xl = self.registers[x] as i16;
+        let yl     = self.registers[y] as i16;
+        self.registers[0xF]=0;
+
+        if self.registers[x] >= self.registers[y] {
             self.registers[0xF]=1;
         }
-        self.registers[x] -= self.registers[y];
+        xl -= yl;
+        if xl < 0 {
+            xl+=256;
+        }
+        self.registers[x] = xl as u8;
     }
 
     //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
     fn arithmetic_six(&mut self, x: usize) {
         self.registers[0xF] = self.registers[x] & 0x1;
-        self.registers[x] >> 1;
+        self.registers[x] >>= 1;
     }
 
     fn arithmetic_seven(&mut self, x: usize, y: usize) {
-        if self.registers[x] < self.registers[y] {
+        let mut xl = self.registers[x] as i16;
+        let     yl = self.registers[y] as i16;
+        self.registers[0xF] = 0;
+        if self.registers[x] <= self.registers[y] {
             self.registers[0xF] = 1;
         }
-        self.registers[x] = self.registers[y]
-            - self.registers[x];
+        xl = yl - xl;
+        println!("XL: {}, X:, {} Y: {}\n", xl, self.registers[x], self.registers[y] );
+        if xl < 0 {
+            xl+=256;
+        }
+        
+        self.registers[x] = xl as u8;
     }
 
     fn arithmetic_fourteen(&mut self, x: usize) {
         self.registers[0xF] = (self.registers[x] >> 7) & 1;
-	self.registers[x] << 1; 
+	self.registers[x] <<= 1; 
     }
 
     fn skip_if_xeqy( &mut self, x: usize, y: usize ) {
@@ -293,9 +382,9 @@ impl State {
     }
 
     fn return_op(&mut self) {
+        self.stack_pointer-=1;
         self.program_counter =
             self.stack[self.stack_pointer as usize];
-        self.stack_pointer-=1;
     }
 
     fn input_disp(&mut self, opcode: u16) {
@@ -422,3 +511,6 @@ fn subtraction() {
 
     assert_eq!(state.registers[1],0xE);
 }
+
+/*#[test]
+fn */

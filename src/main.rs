@@ -40,9 +40,8 @@ fn main() {
 
     while state.next_opcode() != 0 {
         state.run_opcode();
-        //render and other IO stuff here?
       //  state.graphics();
-        std::thread::sleep_ms(100);
+        std::thread::sleep_ms(30);
         state.advance_timer();
     }
     std::process::exit(0);
