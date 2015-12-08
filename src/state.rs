@@ -49,17 +49,16 @@ impl State {
             0 => match opcode {
                 0x00E0 => self.clear_screen(),
                 0x00EE => self.return_op(),
-                _ => panic!("Invalid opcode {}", opcode),
+                _     => return, //ignore
             },
             1  => self.program_counter = bcd,
             2  => self.call_op( bcd ),
             3  => self.skip_if_eq( x, cd ),
             4  => self.skip_if_neq( x, cd ),
             5  => self.skip_if_xeqy( x, y ),
-            6  => self.registers[x]  =  cd,
+            6  => self.registers[x] = cd,
             7  => self.registers[x] =
-                (self.registers[x] as u16 +  cd as u16)
-                as u8,
+                (self.registers[x] as u16 + cd as u16) as u8,
             8  => self.arithmetic_dispatch( opcode ),
             9  => self.skip_if_xneqy( x, y),
             10 => self.I = bcd,
@@ -82,7 +81,7 @@ impl State {
             0x15 => self.delay_timer = self.registers[x],
             0x18 => self.sound_timer = self.registers[x],
             0x1E => self.I += self.registers[x] as u16,
-            0x29 => self.I = (self.registers[x] as u16)*5,
+            0x29 => self.I  = (self.registers[x] as u16)*5,
             0x33 => self.store_bcd(x),
             0x55 => self.store_registers(),
             0x65 => self.load_registers(),
@@ -96,7 +95,7 @@ impl State {
         let mut found = false;
         let mut s = 0;
         if let Some(ref mut graphics) = self.graphics {
-            while( ! found )
+            while ! found 
             {
                 //I really need to learn how to use Rust
                 //properly
@@ -223,7 +222,8 @@ impl State {
                             graphics
                                 .draw_point(xdraw%64 as usize,
                                             ydraw%32 as usize,
-                                            self.screen[ydraw % 32][xdraw % 64]);
+                                            self.screen[ydraw % 32]
+                                            [xdraw % 64]);
                         } else {
                             panic!("Graphics were not initialized!\n");
                         }
@@ -241,7 +241,6 @@ impl State {
         }
 
         if let Some(ref mut graphics) = self.graphics {
-         //   graphics.draw_point(self.screen);
             graphics.draw_screen();
         } else {
             panic!("Graphics not initalized!");
@@ -260,7 +259,7 @@ impl State {
             print!( "{:X} ", j );
         }
         print!("\n");
-        println!( "Running opcode: {:X} at {:X}", (second_byte | (first_byte << 8)), self.program_counter);
+        println!( "Running opcode: {:X} at {:X}", (second_byte | (first_byte << 8)), self.program_counter - 2);
         self.dispatch( second_byte | (first_byte << 8) );
     }
 
@@ -294,25 +293,26 @@ impl State {
     fn arithmetic_four(&mut self, x: usize, y: usize) {
 	// Stores Vy + Vx into Vx and sets VF = carry  
         let mut xl = self.registers[x] as u16;
-        let yl     = self.registers[y] as u16;
-        self.registers[0xF]=0;
+        let     yl = self.registers[y] as u16;
+        self.registers[0xF] = 0;
 
-        if ((xl+yl)>>8) >= 1 {
-            self.registers[0xF]=1
+        if ((xl+yl)>>8) > 0 {
+            self.registers[0xF] = 1;
         }
         xl += yl;
-        self.registers[x] = (xl&0xFF) as u8;
+        self.registers[x] = xl as u8;
     }
     
     fn arithmetic_five(&mut self, x: usize, y: usize) {
         let mut xl = self.registers[x] as i16;
-        let yl     = self.registers[y] as i16;
-        self.registers[0xF]=0;
+        let     yl = self.registers[y] as i16;
+        self.registers[0xF] = 0;
 
-        if self.registers[x] >= self.registers[y] {
-            self.registers[0xF]=1;
+        if self.registers[x] >/*=*/ self.registers[y] {
+            self.registers[0xF] = 1;
         }
         xl -= yl;
+        //simulate unsigned overflow
         if xl < 0 {
             xl+=256;
         }
@@ -329,11 +329,12 @@ impl State {
         let mut xl = self.registers[x] as i16;
         let     yl = self.registers[y] as i16;
         self.registers[0xF] = 0;
-        if self.registers[x] <= self.registers[y] {
+        if self.registers[x] < self.registers[y] {
             self.registers[0xF] = 1;
         }
         xl = yl - xl;
         println!("XL: {}, X:, {} Y: {}\n", xl, self.registers[x], self.registers[y] );
+        //simulate unsigned overflow
         if xl < 0 {
             xl+=256;
         }
@@ -389,9 +390,9 @@ impl State {
 
     fn input_disp(&mut self, opcode: u16) {
         let x  = ((opcode >> 8) & 0xF) as usize;
-        let bc =  opcode & 0xFF;
+        let cd =  opcode & 0xFF;
 
-        match bc {
+        match cd {
             0x9E => self.skip_if_pressed(x),
             0xA1 => self.skip_ifn_pressed(x),
             _    => panic!("Unrecognized opcode")
@@ -402,11 +403,8 @@ impl State {
     {
         let mut i = 0;
         if let Some(ref mut graphics) = self.graphics {
-            if graphics.is_pressed(self.registers[x]) {
-                i = 1; }
-        } else {
-            panic!("Graphics not initialized!");
-        }
+            if graphics.is_pressed(self.registers[x]) { i = 1; }
+        } else { panic!("Graphics not initialized!"); }
 
         //Rust won't allow for multilpe borrows
         //and I don't know how else to do this
@@ -512,5 +510,10 @@ fn subtraction() {
     assert_eq!(state.registers[1],0xE);
 }
 
-/*#[test]
-fn */
+#[test]
+fn calling_and_returning() {
+    let mut state: State;
+    state = Default::default();
+
+    state.registers[1] = 8;
+}

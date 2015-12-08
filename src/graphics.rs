@@ -1,19 +1,14 @@
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
-use std::collections::HashSet;
-
-//mod graphics;
 
 extern crate sdl2;
 
 pub struct Graphics {
-    sdl_context: sdl2::Sdl,
+    sdl_context:     sdl2::Sdl,
     video_subsystem: sdl2::VideoSubsystem,
-//    window: sdl2::video::Window,
-    renderer: sdl2::render::Renderer<'static>,
-    event_pump: sdl2::EventPump
+    renderer:        sdl2::render::Renderer<'static>,
+    event_pump:      sdl2::EventPump
 }
 
 impl Default for Graphics {
@@ -39,7 +34,7 @@ impl Default for Graphics {
             .unwrap();
 
         rend.set_draw_color(Color::RGB(0,0,0));
-        rend.set_scale(8.0,8.0); //check this later
+        rend.set_scale(8.0,8.0); 
         rend.clear();
         rend.present();
 
@@ -59,23 +54,6 @@ impl Default for Graphics {
 
 
 impl Graphics {
-    pub fn graphics(&mut self) {
-
-        'running: loop {
-            for event in self.event_pump.poll_iter() {
-                match event {
-                    Event::Quit {..}
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),..}
-                    => {
-                        break 'running
-                    },
-                    _ => {}
-                }
-            }
-        }
-    }
-
     pub fn is_pressed(&mut self, key: u8) -> bool
     {
         let mut kc: Keycode;
@@ -147,7 +125,8 @@ impl Graphics {
                 true  => Color::RGB(255,255,255),
                 false => Color::RGB(0,  0,  0  )
             });
-        print!("DRAWING AT ({},{}) to {}\n", x, y, on);
+        //DEBUG:
+       // print!("DRAWING AT ({},{}) to {}\n", x, y, on);
         self.renderer
             .draw_point(sdl2::rect::Point::new(
                 x as i32,
@@ -170,24 +149,6 @@ impl Graphics {
         self.renderer.clear();
         self.renderer.present();
     }
-
-    /*fn pressed_scancode_set(e: &sdl2::EventPump)
-                            -> HashSet<Scancode> {
-        e.keyboard_state().pressed_scancodes().collect()
-    }
-
-    /*fn pressed_keycode_set(e: &sdl2::EventPump) -> HashSet <Keycode> {
-    e.keyboard_state().pressed_scancodes()
-    .filter_map(Keycode::from_scancode())
-    .collect()
-}*/
-    
-    fn newly_pressed(old: &HashSet<Scancode>,
-                     new: &HashSet<Scancode>)
-                     -> HashSet<Scancode> {
-        new - old
-    }
- */   
 }
 
 fn lookup_keycode(key: u8) -> Keycode {

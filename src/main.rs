@@ -15,7 +15,6 @@ fn main() {
     if args.len() < 2 
     {
         println!("Enter the name of a file to run");
-        //fix error message
         std::process::exit(1);
     }
     
@@ -29,20 +28,23 @@ fn main() {
     let mut i = 0x200;
     for x in fin.bytes() {
         state.memory[i] = x.unwrap();
+
         //DEBUG:
-        
-        println!( "{:X} at {}", state.memory[i], i );
+        //println!( "{:X} at {}", state.memory[i], i );
         i+=1;
     }
 
     state.load_font();
     state.initialize_graphics();
 
+    let sleep_time = 20;
+    i = 0;
     while state.next_opcode() != 0 {
         state.run_opcode();
-      //  state.graphics();
-        std::thread::sleep_ms(30);
-        state.advance_timer();
+        std::thread::sleep_ms(sleep_time);
+        if i == 0
+        { state.advance_timer(); i += (60/sleep_time) as usize; }
+        else { i-=1; }
     }
     std::process::exit(0);
 }
