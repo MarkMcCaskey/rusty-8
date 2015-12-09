@@ -7,14 +7,14 @@ extern crate rand;
 
 pub struct State {
     pub memory:     [u8; 4096],
-    pub registers:      [u8; 16], // change later
+    registers:      [u8; 16], 
     stack:          [u16;16],
     delay_timer:     u8,
     sound_timer:     u8,
     stack_pointer:   u16,
     program_counter: u16,
     I:               u16,
-    screen:         [[bool; 64]; 32],
+    screen:        [[bool; 64]; 32],
     graphics:        Option<graphics::Graphics>
 }
 
@@ -62,7 +62,8 @@ impl State {
             8  => self.arithmetic_dispatch( opcode ),
             9  => self.skip_if_xneqy( x, y),
             10 => self.I = bcd,
-            11 => self.program_counter = bcd + (self.registers[0] as u16),
+            11 => self.program_counter = bcd
+                + (self.registers[0] as u16),
             12 => self.random( opcode ),
             13 => self.display_sprite( opcode ),
             14 => self.input_disp( opcode ),
@@ -187,7 +188,7 @@ impl State {
         if let Some(ref mut graphics) = self.graphics {
             graphics.clear_screen();
         } else {
-            panic!("Graphics have not been initialized");
+            panic!("Graphics not initialized");
         }
     }
 
@@ -214,18 +215,19 @@ impl State {
                             self.registers[0xF] = 1;
                         }
                         self.screen[ydraw % 32][xdraw % 64]
-                            = !self.screen[ydraw % 32][xdraw % 64];
+                            = !self.screen[ydraw % 32]
+                                          [xdraw % 64];
                         
                         if let Some(ref mut graphics)
                             = self.graphics
                         {
-                            graphics
-                                .draw_point(xdraw%64 as usize,
-                                            ydraw%32 as usize,
-                                            self.screen[ydraw % 32]
-                                            [xdraw % 64]);
+                            graphics.draw_point(
+                                xdraw%64 as usize,
+                                ydraw%32 as usize,
+                                self.screen[ydraw % 32]
+                                           [xdraw % 64]);
                         } else {
-                            panic!("Graphics were not initialized!\n");
+                            panic!("Graphics not initialized!");
                         }
                     }
                 }
@@ -253,13 +255,6 @@ impl State {
             (self.program_counter-2) as usize] as u16; 
         let second_byte = self.memory[
             (self.program_counter-1) as usize] as u16;
-        //DEBUG:
-        println!( "registers:" );
-        for j in self.registers.iter() {
-            print!( "{:X} ", j );
-        }
-        print!("\n");
-        println!( "Running opcode: {:X} at {:X}", (second_byte | (first_byte << 8)), self.program_counter - 2);
         self.dispatch( second_byte | (first_byte << 8) );
     }
 
@@ -319,7 +314,6 @@ impl State {
         self.registers[x] = xl as u8;
     }
 
-    //Sets VF as the least sigificant bit of Vx Then Vx is divided by 2  
     fn arithmetic_six(&mut self, x: usize) {
         self.registers[0xF] = self.registers[x] & 0x1;
         self.registers[x] >>= 1;
@@ -333,7 +327,6 @@ impl State {
             self.registers[0xF] = 1;
         }
         xl = yl - xl;
-        println!("XL: {}, X:, {} Y: {}\n", xl, self.registers[x], self.registers[y] );
         //simulate unsigned overflow
         if xl < 0 {
             xl+=256;
@@ -475,45 +468,4 @@ impl State {
         }
     }
     
-}
-
-#[test]
-fn it_works() {
-}
-
-#[test]
-fn addition() {
-    let mut state: State;
-    state = Default::default();
-
-    state.dispatch(0x6000); //a = 0
-    state.dispatch(0x6100); //b = 0
-    state.dispatch(0x7110); //b+=16
-    state.dispatch(0x700A); //a+=10
-    state.dispatch(0x7004); //a+=4
-    state.dispatch(0x8014); //a+=b (30)
-    state.dispatch(0x8104); //b+=a (46)
-
-    assert_eq!(state.registers[1],46);
-}
-
-#[test]
-fn subtraction() {
-    let mut state: State;
-    state = Default::default();
-    
-    state.dispatch(0x60F0); //a = 240
-    state.dispatch(0x61FF); //b = 255
-    state.dispatch(0x7001); //a+=1 (241)
-    state.dispatch(0x8105); //b-=a (14)
-
-    assert_eq!(state.registers[1],0xE);
-}
-
-#[test]
-fn calling_and_returning() {
-    let mut state: State;
-    state = Default::default();
-
-    state.registers[1] = 8;
 }

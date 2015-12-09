@@ -125,8 +125,6 @@ impl Graphics {
                 true  => Color::RGB(255,255,255),
                 false => Color::RGB(0,  0,  0  )
             });
-        //DEBUG:
-       // print!("DRAWING AT ({},{}) to {}\n", x, y, on);
         self.renderer
             .draw_point(sdl2::rect::Point::new(
                 x as i32,

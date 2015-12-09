@@ -28,16 +28,13 @@ fn main() {
     let mut i = 0x200;
     for x in fin.bytes() {
         state.memory[i] = x.unwrap();
-
-        //DEBUG:
-        //println!( "{:X} at {}", state.memory[i], i );
         i+=1;
     }
 
     state.load_font();
     state.initialize_graphics();
 
-    let sleep_time = 20;
+    let sleep_time = 2;
     i = 0;
     while state.next_opcode() != 0 {
         state.run_opcode();
